@@ -6,7 +6,8 @@
  */
 function calculateSimpleRevenue(purchase, _product) {
     const discount = 1 - (purchase.discount / 100);
-    return parseFloat((purchase.sale_price * purchase.quantity * discount).toFixed(2));
+    const revenue = purchase.sale_price * purchase.quantity * discount;
+    return Math.round(revenue * 100) / 100;
 }
 
 /**
@@ -17,10 +18,15 @@ function calculateSimpleRevenue(purchase, _product) {
  * @returns {number}
  */
 function calculateBonusByProfit(index, total, seller) {
-    if (index === 0) return parseFloat((seller.profit * 0.15).toFixed(2));
-    if (index === 1 || index === 2) return parseFloat((seller.profit * 0.10).toFixed(2));
-    if (index === total - 1) return 0;
-    return parseFloat((seller.profit * 0.05).toFixed(2));
+    const profit = seller.profit;
+    let rate;
+    
+    if (index === 0) rate = 0.15;
+    else if (index === 1 || index === 2) rate = 0.10;
+    else if (index === total - 1) rate = 0;
+    else rate = 0.05;
+    
+    return Math.round(profit * rate * 100) / 100;
 }
 
 /**
@@ -46,8 +52,8 @@ function analyzeSalesData(data, options) {
         throw new Error('Некорректные входные данные');
     }
 
-    // Проверка опций (строгая)
-    if (arguments.length < 2 || 
+    // Строгая проверка опций
+    if (arguments.length === 1 || 
         (options && typeof options === 'object' && 
          !options.calculateRevenue && 
          !options.calculateBonus)) {
@@ -88,11 +94,12 @@ function analyzeSalesData(data, options) {
             if (!product) return;
 
             const revenueItem = calculateRevenue(item, product);
-            seller.revenue = parseFloat((seller.revenue + revenueItem).toFixed(2));
+            seller.revenue = Math.round((seller.revenue + revenueItem) * 100) / 100;
 
             const cost = product.purchase_price * item.quantity;
-            seller.profit = parseFloat((seller.profit + (revenueItem - cost)).toFixed(2));
-
+            const profitItem = revenueItem - cost;
+            seller.profit = Math.round((seller.profit + profitItem) * 100) / 100;
+            
             // Учет проданных товаров
             const currentQuantity = seller.products_sold.get(item.sku) || 0;
             seller.products_sold.set(item.sku, currentQuantity + item.quantity);
@@ -113,19 +120,10 @@ function analyzeSalesData(data, options) {
             .map(([sku, quantity]) => ({ sku, quantity }));
         
         seller.top_products = sortedProducts;
+
+        // Удаляем временные поля
+        delete seller.products_sold;
     });
 
-    // Удаляем временные поля и возвращаем результат
-    return sellerStats.map(seller => {
-        const result = {
-            seller_id: seller.seller_id,
-            name: seller.name,
-            revenue: seller.revenue,
-            profit: seller.profit,
-            sales_count: seller.sales_count,
-            top_products: seller.top_products,
-            bonus: seller.bonus
-        };
-        return result;
-    });
+    return sellerStats;
 }
