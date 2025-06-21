@@ -44,13 +44,21 @@ function analyzeSalesData(data, options) {
         throw new Error('Некорректные входные данные');
     }
 
-    // Проверка наличия опций
-    const { calculateRevenue = calculateSimpleRevenue, calculateBonus = calculateBonusByProfit } = options || {};
-    if (!calculateRevenue || !calculateBonus) {
+    // Проверка опций (новый код)
+    if (options && (typeof options !== 'object' || Array.isArray(options))) {
+        throw new Error('Опции должны быть объектом');
+    }
+
+    const { 
+        calculateRevenue = calculateSimpleRevenue, 
+        calculateBonus = calculateBonusByProfit 
+    } = options || {};
+
+    if (typeof calculateRevenue !== 'function' || typeof calculateBonus !== 'function') {
         throw new Error('Не переданы функции для расчетов');
     }
 
-    // Подготовка промежуточных данных для сбора статистики
+    // Остальной код без изменений...
     const sellerStats = data.sellers.map(seller => ({
         id: seller.id,
         name: `${seller.first_name} ${seller.last_name}`,
